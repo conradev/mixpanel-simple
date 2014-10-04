@@ -1,0 +1,3 @@
+[submodule "PrefixedJSONKit"]
+	path = JSONKit
+	url = https://github.com/apptentive/PrefixedJSONKit.git

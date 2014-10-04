@@ -12,6 +12,9 @@
 		D0722B3019DF6CDB009CBE62 /* MixpanelFunctions.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */; };
 		D0722B4919DF6DAD009CBE62 /* Mixpanel.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B1C19DF6CAB009CBE62 /* Mixpanel.m */; };
 		D0722B4A19DF6DAD009CBE62 /* MixpanelFunctions.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */; };
+		D0722B4F19DF739A009CBE62 /* PJSONKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0722B4D19DF739A009CBE62 /* PJSONKit.h */; };
+		D0722B5219DF740B009CBE62 /* PJSONKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B4E19DF739A009CBE62 /* PJSONKit.m */; };
+		D0722B5319DF741A009CBE62 /* PJSONKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B4E19DF739A009CBE62 /* PJSONKit.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -34,6 +37,8 @@
 		D0722B2E19DF6CDB009CBE62 /* MixpanelFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MixpanelFunctions.h; sourceTree = "<group>"; };
 		D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MixpanelFunctions.m; sourceTree = "<group>"; };
 		D0722B3519DF6D8D009CBE62 /* libMixpanel-OSX.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libMixpanel-OSX.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0722B4D19DF739A009CBE62 /* PJSONKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PJSONKit.h; path = JSONKit/PJSONKit.h; sourceTree = SOURCE_ROOT; };
+		D0722B4E19DF739A009CBE62 /* PJSONKit.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = PJSONKit.m; path = JSONKit/PJSONKit.m; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -74,12 +79,22 @@
 		D0722B1919DF6CAB009CBE62 /* Mixpanel */ = {
 			isa = PBXGroup;
 			children = (
+				D0722B4C19DF7391009CBE62 /* JSONKit */,
 				D0722B1A19DF6CAB009CBE62 /* Mixpanel.h */,
 				D0722B1C19DF6CAB009CBE62 /* Mixpanel.m */,
 				D0722B2E19DF6CDB009CBE62 /* MixpanelFunctions.h */,
 				D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */,
 			);
 			path = Mixpanel;
+			sourceTree = "<group>";
+		};
+		D0722B4C19DF7391009CBE62 /* JSONKit */ = {
+			isa = PBXGroup;
+			children = (
+				D0722B4D19DF739A009CBE62 /* PJSONKit.h */,
+				D0722B4E19DF739A009CBE62 /* PJSONKit.m */,
+			);
+			name = JSONKit;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -89,6 +104,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0722B4F19DF739A009CBE62 /* PJSONKit.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,6 +185,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0722B5319DF741A009CBE62 /* PJSONKit.m in Sources */,
 				D0722B1D19DF6CAB009CBE62 /* Mixpanel.m in Sources */,
 				D0722B3019DF6CDB009CBE62 /* MixpanelFunctions.m in Sources */,
 			);
@@ -178,6 +195,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0722B5219DF740B009CBE62 /* PJSONKit.m in Sources */,
 				D0722B4919DF6DAD009CBE62 /* Mixpanel.m in Sources */,
 				D0722B4A19DF6DAD009CBE62 /* MixpanelFunctions.m in Sources */,
 			);
@@ -189,10 +207,8 @@
 		D0722B2619DF6CAB009CBE62 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
@@ -222,16 +238,15 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-DJSONKIT_PREFIX=MP";
 			};
 			name = Debug;
 		};
 		D0722B2719DF6CAB009CBE62 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
@@ -255,6 +270,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DJSONKIT_PREFIX=MP";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -262,6 +278,11 @@
 		D0722B2919DF6CAB009CBE62 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				OTHER_CFLAGS = (
+					"-DJSONKIT_PREFIX=MP",
+					"-Wno-deprecated-objc-pointer-introspection",
+					"-Wno-objc-designated-initializers",
+				);
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -272,6 +293,11 @@
 		D0722B2A19DF6CAB009CBE62 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				OTHER_CFLAGS = (
+					"-DJSONKIT_PREFIX=MP",
+					"-Wno-deprecated-objc-pointer-introspection",
+					"-Wno-objc-designated-initializers",
+				);
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -322,6 +348,7 @@
 				D0722B2A19DF6CAB009CBE62 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D0722B4319DF6D8D009CBE62 /* Build configuration list for PBXNativeTarget "Mixpanel-OSX" */ = {
 			isa = XCConfigurationList;
@@ -330,6 +357,7 @@
 				D0722B4519DF6D8D009CBE62 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -10,8 +10,11 @@
 #import <UIKit/UIKit.h>
 #endif
 
+#include <resolv.h>
+
 #import "Mixpanel.h"
 #import "MixpanelFunctions.h"
+#import "PJSONKit.h"
 
 static NSString * const MPBaseURLString = @"https://api.mixpanel.com";
 
@@ -163,15 +166,25 @@ static Mixpanel *sharedInstance = nil;
 
     NSError *error = nil;
     _batch = [[_eventQueue subarrayWithRange:NSMakeRange(0, length)] copy];
-    NSData *data = [NSJSONSerialization dataWithJSONObject:_batch options:0 error:&error];
+    NSData *data = [_batch MPJSONDataWithOptions:0 error:&error];
     if (!data) {
         [_batch release];
         _batch = nil;
         return;
     }
 
-    NSString *encodedData = (NSString *)CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (CFStringRef)[data base64EncodedStringWithOptions:0], NULL, CFSTR("!*'();:@&=+$,/?%#[]"), kCFStringEncodingUTF8));
-    NSData *body = [[NSString stringWithFormat:@"ip=1&data=%@", encodedData] dataUsingEncoding:NSUTF8StringEncoding];
+
+    NSUInteger encodedLength = ((data.length + 2) / 3) * 4 + 1;
+    char *buffer = malloc(encodedLength);
+    int actual = b64_ntop(data.bytes, data.length, buffer, encodedLength);
+    if (!actual) {
+        free(buffer);
+        return;
+    }
+
+    NSString *encodedData = [[[NSString alloc] initWithBytesNoCopy:buffer length:(actual + 1) encoding:NSUTF8StringEncoding freeWhenDone:YES] autorelease];
+    NSString *escapedData = (NSString *)CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (CFStringRef)encodedData, NULL, CFSTR("!*'();:@&=+$,/?%#[]"), kCFStringEncodingUTF8));
+    NSData *body = [[NSString stringWithFormat:@"ip=1&data=%@", escapedData] dataUsingEncoding:NSUTF8StringEncoding];
 
     NSURL *url = [NSURL URLWithString:@"track/" relativeToURL:_baseURL];
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];

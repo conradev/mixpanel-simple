@@ -79,7 +79,7 @@ static Mixpanel *sharedInstance = nil;
 
         _token = [token copy];
         _cacheURL = [[[cacheDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"Mixpanel-%@", token]] URLByAppendingPathExtension:@"plist"] retain];
-        _baseURL = [NSURL URLWithString:MPBaseURLString];
+        _baseURL = [[NSURL URLWithString:MPBaseURLString] retain];
 
         NSDictionary *state = [NSDictionary dictionaryWithContentsOfURL:_cacheURL];
         _distinctId = [state objectForKey:MPDistinctIdKey];

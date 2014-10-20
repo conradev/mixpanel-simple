@@ -25,6 +25,7 @@
     BOOL _writing;
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
     NSOperationQueue *_presentedItemOperationQueue;
+    NSMutableSet *_blockedURLs;
     void (^_reader)(void (^reacquirer)(void));
     void (^_writer)(void (^reacquirer)(void));
 #endif
@@ -33,6 +34,7 @@
 @property (nonatomic, readonly, copy) NSString *token;
 @property (nonatomic, readonly, copy) NSString *distinctId;
 @property (nonatomic, copy) NSDictionary *defaultProperties;
+@property (nonatomic, readonly, getter = isPresenting) BOOL presenting;
 
 + (instancetype)sharedInstanceWithToken:(NSString *)token cacheDirectory:(NSURL *)cacheDirectory;
 + (instancetype)sharedInstance;
@@ -45,5 +47,8 @@
 - (void)track:(NSString *)event properties:(NSDictionary *)properties;
 
 - (void)flush;
+
+- (void)startPresenting;
+- (void)stopPresenting;
 
 @end

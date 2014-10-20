@@ -28,6 +28,7 @@ static Mixpanel *sharedInstance = nil;
 @synthesize token = _token;
 @synthesize distinctId = _distinctId;
 @synthesize defaultProperties = _defaultProperties;
+@synthesize presenting = _presenting;
 
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
 @synthesize presentedItemOperationQueue = _presentedItemOperationQueue;
@@ -87,27 +88,9 @@ static Mixpanel *sharedInstance = nil;
 
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
         _presentedItemOperationQueue = [[NSOperationQueue alloc] init];
-
-        __block NSDictionary *state = nil;
-        if ([NSFileCoordinator class]) {
-            NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
-            [coordinator coordinateReadingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
-                state = [NSDictionary dictionaryWithContentsOfURL:newURL];
-                
-                // "To avoid that race condition you can invoke +addFilePresenter: in the same block that you pass to -coordinateReadingItemAtURL:options:error:byAccessor: to read what the file presenter will present"
-                // Not sure why I need to autorelease here, +addFilePresenter: should not be retaining self
-                [NSFileCoordinator addFilePresenter:[self autorelease]];
-            }];
-            [coordinator release];
-        } else {
-            state = [NSDictionary dictionaryWithContentsOfURL:_cacheURL];
-        }
-#else
-        NSDictionary *state = [NSDictionary dictionaryWithContentsOfURL:_cacheURL];
 #endif
 
-        _distinctId = [[state objectForKey:MPDistinctIdKey] copy];
-        _eventQueue = ([[state objectForKey:MPEventQueueKey] mutableCopy] ?: [NSMutableArray new]);
+        [self startPresenting];
 
         MPUnsafeObject *unsafeSelf = [MPUnsafeObject unsafeObjectWithObject:self];
         _timer = [[NSTimer scheduledTimerWithTimeInterval:15.0f target:unsafeSelf selector:@selector(flush) userInfo:nil repeats:YES] retain];
@@ -117,18 +100,73 @@ static Mixpanel *sharedInstance = nil;
 }
 
 - (void)dealloc {
+    [self stopPresenting];
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
-    [NSFileCoordinator removeFilePresenter:self];
     [_presentedItemOperationQueue release];
 #endif
     [_token release];
     [_distinctId release];
     [_defaultProperties release];
-    [_cacheURL release];
-    [_eventQueue release];
     [_timer invalidate];
     [_timer release];
+    [_cacheURL release];
+    [_eventQueue release];
     [super dealloc];
+}
+
+- (BOOL)isPresenting {
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    return ([NSFileCoordinator class] ? [[NSFileCoordinator filePresenters] containsObject:self] : _presenting);
+#else
+    return _presenting;
+#endif
+}
+
+- (void)startPresenting {
+    if (_reading || _writing)
+        return;
+
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        __block NSDictionary *state = nil;
+        if ([NSFileCoordinator class]) {
+            NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
+            [coordinator coordinateReadingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
+                state = [NSDictionary dictionaryWithContentsOfURL:newURL];
+                [NSFileCoordinator addFilePresenter:self];
+            }];
+            [coordinator release];
+        } else {
+            state = [NSDictionary dictionaryWithContentsOfURL:_cacheURL];
+        }
+#else
+        NSDictionary *state = [NSDictionary dictionaryWithContentsOfURL:_cacheURL];
+#endif
+
+        _presenting = YES;
+
+        [_distinctId release];
+        [_eventQueue release];
+
+        _distinctId = [[state objectForKey:MPDistinctIdKey] copy];
+        _eventQueue = ([[state objectForKey:MPEventQueueKey] mutableCopy] ?: [NSMutableArray new]);
+        [_eventQueue addObjectsFromArray:_eventBuffer];
+
+        [self save];
+
+        [_eventBuffer release];
+        _eventBuffer = nil;
+
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    });
+#endif
+}
+
+- (void)stopPresenting {
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    [NSFileCoordinator removeFilePresenter:self];
+#endif
+    _presenting = NO;
 }
 
 - (NSString *)distinctId {
@@ -149,6 +187,7 @@ static Mixpanel *sharedInstance = nil;
 }
 
 - (void)identify:(NSString *)distinctId {
+    [_distinctId release];
     _distinctId = [distinctId copy];
     [self save];
 }
@@ -173,7 +212,7 @@ static Mixpanel *sharedInstance = nil;
 
     NSDictionary *eventDictionary = MPJSONSerializableObject([NSDictionary dictionaryWithObjectsAndKeys:event, @"event", mergedProperties, @"properties", nil]);
 
-    if (_reading || _writing) {
+    if (_reading || _writing || !self.presenting) {
         if (!_eventBuffer)
             _eventBuffer = [NSMutableArray new];
         [_eventBuffer addObject:eventDictionary];
@@ -185,43 +224,23 @@ static Mixpanel *sharedInstance = nil;
 
 #pragma mark - Persistence
 
-#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
-
-- (void)merge {
-    if (_reading || _writing)
-        return;
-
-    __block NSDictionary *state = nil;
-    NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
-    [coordinator coordinateReadingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
-        state = [NSDictionary dictionaryWithContentsOfURL:newURL];
-    }];
-    [coordinator release];
-
-    _eventQueue = ([[state objectForKey:MPEventQueueKey] mutableCopy] ?: [NSMutableArray new]);
-    [_eventQueue addObjectsFromArray:_eventBuffer];
-
-    [self save];
-
-    [_eventBuffer release];
-    _eventBuffer = nil;
-}
-
-#endif
-
 - (void)save {
-    NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_distinctId, MPDistinctIdKey, _eventQueue, MPEventQueueKey, nil];
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
     if ([NSFileCoordinator class]) {
-        NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
-        [coordinator coordinateWritingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
-            [state writeToURL:newURL atomically:YES];
-        }];
-        [coordinator release];
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
+            [coordinator coordinateWritingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
+                NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_distinctId, MPDistinctIdKey, _eventQueue, MPEventQueueKey, nil];
+                [state writeToURL:newURL atomically:YES];
+            }];
+            [coordinator release];
+        });
     } else {
+        NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_distinctId, MPDistinctIdKey, _eventQueue, MPEventQueueKey, nil];
         [state writeToURL:_cacheURL atomically:YES];
     }
 #else
+    NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_distinctId, MPDistinctIdKey, _eventQueue, MPEventQueueKey, nil];
     [state writeToURL:_cacheURL atomically:YES];
 #endif
 }
@@ -239,44 +258,56 @@ static Mixpanel *sharedInstance = nil;
         return YES;
     }];
 
+    if (!_blockedURLs)
+        _blockedURLs = [NSMutableSet new];
+
     for (NSURL *cacheURL in enumerator) {
         if ([cacheURL isEqual:_cacheURL])
             continue;
         if (![cacheURL.lastPathComponent hasPrefix:@"Mixpanel"])
             continue;
+        if (![[cacheURL.lastPathComponent stringByDeletingPathExtension] hasSuffix:_token])
+            continue;
 
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] init];
-            [coordinator coordinateReadingItemAtURL:cacheURL options:0 writingItemAtURL:cacheURL options:0 error:nil byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
-                NSMutableDictionary *state = [NSMutableDictionary dictionaryWithContentsOfURL:newReadingURL];
-                if (!state)
-                    return;
+        if (![_blockedURLs containsObject:cacheURL]) {
+            [_blockedURLs addObject:cacheURL];
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] init];
+                [_blockedURLs addObject:cacheURL];
+                [coordinator coordinateReadingItemAtURL:cacheURL options:0 writingItemAtURL:cacheURL options:0 error:nil byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
+                    NSMutableDictionary *state = [NSMutableDictionary dictionaryWithContentsOfURL:newReadingURL];
+                    if (!state)
+                        return;
 
-                NSMutableArray *events = ([NSMutableArray arrayWithArray:[state objectForKey:MPEventQueueKey]] ?: [NSMutableArray array]);
-                NSUInteger length = MIN(events.count, 100);
-                if (!length)
-                    return;
+                    NSMutableArray *events = ([NSMutableArray arrayWithArray:[state objectForKey:MPEventQueueKey]] ?: [NSMutableArray array]);
+                    NSUInteger length = MIN(events.count, 100);
+                    if (!length)
+                        return;
 
-                NSArray *batch = [events subarrayWithRange:NSMakeRange(0, length)];
-                NSURLRequest *request = MPURLRequestForEvents(events);
-                if (!request)
-                    return;
+                    NSArray *batch = [events subarrayWithRange:NSMakeRange(0, length)];
+                    NSURLRequest *request = MPURLRequestForEvents(events);
+                    if (!request)
+                        return;
 
-                NSError *error = nil;
-                NSHTTPURLResponse *response = nil;
-                [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
+                    NSError *error = nil;
+                    NSHTTPURLResponse *response = nil;
+                    [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
 
-                NSIndexSet *acceptableCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
-                if (!error && [acceptableCodes containsIndex:response.statusCode])
-                    [events removeObjectsInArray:batch];
-                else
-                    return;
+                    NSIndexSet *acceptableCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
+                    if (!error && [acceptableCodes containsIndex:response.statusCode])
+                        [events removeObjectsInArray:batch];
+                    else
+                        return;
 
-                [state setObject:events forKey:MPEventQueueKey];
-                [state writeToURL:newWritingURL atomically:YES];
-            }];
-            [coordinator release];
-        });
+                    [state setObject:events forKey:MPEventQueueKey];
+                    [state writeToURL:newWritingURL atomically:YES];
+                }];
+                [coordinator release];
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    [_blockedURLs removeObject:cacheURL];
+                });
+            });
+        }
     }
 }
 
@@ -287,7 +318,7 @@ static Mixpanel *sharedInstance = nil;
     [self flushOtherClients];
 #endif
 
-    if (_connection || _reading || _writing)
+    if (_connection || _reading || _writing || !self.presenting)
         return;
 
     NSUInteger length = MIN(_eventQueue.count, 50);
@@ -336,7 +367,7 @@ static Mixpanel *sharedInstance = nil;
         _reading = YES;
         _reader(^{
             _reading = NO;
-            [self merge];
+            [self startPresenting];
         });
         Block_release(_reader);
         _reader = nil;
@@ -346,7 +377,7 @@ static Mixpanel *sharedInstance = nil;
         _writing = YES;
         _writer(^{
             _writing = NO;
-            [self merge];
+            [self startPresenting];
         });
         Block_release(_writer);
         _writer = nil;
@@ -393,7 +424,7 @@ static Mixpanel *sharedInstance = nil;
         _reading = YES;
         reader(^{
             _reading = NO;
-            [self merge];
+            [self startPresenting];
         });
     }
 }
@@ -405,7 +436,7 @@ static Mixpanel *sharedInstance = nil;
         _writing = YES;
         writer(^{
             _writing = NO;
-            [self merge];
+            [self startPresenting];
         });
     }
 }

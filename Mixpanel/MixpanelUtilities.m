@@ -16,6 +16,12 @@
 #endif
 
 #include <sys/sysctl.h>
+#include <resolv.h>
+
+#include "MixpanelUtilities.h"
+#import "PJSONKit.h"
+
+static NSString * const MPBaseURLString = @"https://api.mixpanel.com";
 
 id MPJSONSerializableObject(id object) {
     static NSDateFormatter *dateFormatter = nil;
@@ -55,6 +61,31 @@ id MPJSONSerializableObject(id object) {
     }
 
     return [object description];
+}
+
+extern NSURLRequest *MPURLRequestForEvents(NSArray *events) {
+    NSError *error = nil;
+    NSData *data = [events MPJSONDataWithOptions:0 error:&error];
+
+    NSUInteger encodedLength = ((data.length + 2) / 3) * 4 + 1;
+    char *buffer = malloc(encodedLength);
+    int actual = b64_ntop(data.bytes, data.length, buffer, encodedLength);
+    if (!actual) {
+        free(buffer);
+        return nil;
+    }
+
+    NSString *encodedData = [[[NSString alloc] initWithBytesNoCopy:buffer length:(actual + 1) encoding:NSUTF8StringEncoding freeWhenDone:YES] autorelease];
+    NSString *escapedData = (NSString *)CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (CFStringRef)encodedData, NULL, CFSTR("!*'();:@&=+$,/?%#[]"), kCFStringEncodingUTF8));
+    NSData *body = [[NSString stringWithFormat:@"ip=1&data=%@", escapedData] dataUsingEncoding:NSUTF8StringEncoding];
+
+    NSURL *baseURL = [NSURL URLWithString:MPBaseURLString];
+    NSURL *url = [NSURL URLWithString:@"track/" relativeToURL:baseURL];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    [request setHTTPMethod:@"POST"];
+    [request setHTTPBody:body];
+
+    return request;
 }
 
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
@@ -139,3 +170,23 @@ NSDictionary *MPDeviceProperties() {
 }
 
 #endif
+
+@implementation MPUnsafeObject
+
++ (instancetype)unsafeObjectWithObject:(id)object {
+    return [[[self alloc] initWithObject:object] autorelease];
+}
+
+- (instancetype)initWithObject:(id)object {
+    self = [super init];
+    if (self) {
+        _object = object;
+    }
+    return self;
+}
+
+- (id)forwardingTargetForSelector:(SEL)aSelector {
+    return _object;
+}
+
+@end

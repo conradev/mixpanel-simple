@@ -13,14 +13,21 @@
     NSString *_distinctId;
     NSDictionary *_defaultProperties;
     NSURL *_cacheURL;
-    NSURL *_baseURL;
     NSMutableArray *_eventQueue;
+    NSMutableArray *_eventBuffer;
     NSArray *_batch;
     NSURLConnection *_connection;
     NSHTTPURLResponse *_response;
     NSError *_error;
     NSData *_data;
     NSTimer *_timer;
+    BOOL _reading;
+    BOOL _writing;
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    NSOperationQueue *_presentedItemOperationQueue;
+    void (^_reader)(void (^reacquirer)(void));
+    void (^_writer)(void (^reacquirer)(void));
+#endif
 }
 
 @property (nonatomic, readonly, copy) NSString *token;

@@ -9,9 +9,9 @@
 /* Begin PBXBuildFile section */
 		D0722B1B19DF6CAB009CBE62 /* Mixpanel.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = D0722B1A19DF6CAB009CBE62 /* Mixpanel.h */; };
 		D0722B1D19DF6CAB009CBE62 /* Mixpanel.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B1C19DF6CAB009CBE62 /* Mixpanel.m */; };
-		D0722B3019DF6CDB009CBE62 /* MixpanelFunctions.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */; };
+		D0722B3019DF6CDB009CBE62 /* MixpanelUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B2F19DF6CDB009CBE62 /* MixpanelUtilities.m */; };
 		D0722B4919DF6DAD009CBE62 /* Mixpanel.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B1C19DF6CAB009CBE62 /* Mixpanel.m */; };
-		D0722B4A19DF6DAD009CBE62 /* MixpanelFunctions.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */; };
+		D0722B4A19DF6DAD009CBE62 /* MixpanelUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B2F19DF6CDB009CBE62 /* MixpanelUtilities.m */; };
 		D0722B4F19DF739A009CBE62 /* PJSONKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0722B4D19DF739A009CBE62 /* PJSONKit.h */; };
 		D0722B5219DF740B009CBE62 /* PJSONKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B4E19DF739A009CBE62 /* PJSONKit.m */; };
 		D0722B5319DF741A009CBE62 /* PJSONKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B4E19DF739A009CBE62 /* PJSONKit.m */; };
@@ -34,8 +34,8 @@
 		D0722B1719DF6CAB009CBE62 /* libMixpanel-iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libMixpanel-iOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0722B1A19DF6CAB009CBE62 /* Mixpanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Mixpanel.h; sourceTree = "<group>"; };
 		D0722B1C19DF6CAB009CBE62 /* Mixpanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Mixpanel.m; sourceTree = "<group>"; };
-		D0722B2E19DF6CDB009CBE62 /* MixpanelFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MixpanelFunctions.h; sourceTree = "<group>"; };
-		D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MixpanelFunctions.m; sourceTree = "<group>"; };
+		D0722B2E19DF6CDB009CBE62 /* MixpanelUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MixpanelUtilities.h; sourceTree = "<group>"; };
+		D0722B2F19DF6CDB009CBE62 /* MixpanelUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MixpanelUtilities.m; sourceTree = "<group>"; };
 		D0722B3519DF6D8D009CBE62 /* libMixpanel-OSX.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libMixpanel-OSX.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0722B4D19DF739A009CBE62 /* PJSONKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PJSONKit.h; path = JSONKit/PJSONKit.h; sourceTree = SOURCE_ROOT; };
 		D0722B4E19DF739A009CBE62 /* PJSONKit.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = PJSONKit.m; path = JSONKit/PJSONKit.m; sourceTree = SOURCE_ROOT; };
@@ -82,8 +82,8 @@
 				D0722B4C19DF7391009CBE62 /* JSONKit */,
 				D0722B1A19DF6CAB009CBE62 /* Mixpanel.h */,
 				D0722B1C19DF6CAB009CBE62 /* Mixpanel.m */,
-				D0722B2E19DF6CDB009CBE62 /* MixpanelFunctions.h */,
-				D0722B2F19DF6CDB009CBE62 /* MixpanelFunctions.m */,
+				D0722B2E19DF6CDB009CBE62 /* MixpanelUtilities.h */,
+				D0722B2F19DF6CDB009CBE62 /* MixpanelUtilities.m */,
 			);
 			path = Mixpanel;
 			sourceTree = "<group>";
@@ -187,7 +187,7 @@
 			files = (
 				D0722B5319DF741A009CBE62 /* PJSONKit.m in Sources */,
 				D0722B1D19DF6CAB009CBE62 /* Mixpanel.m in Sources */,
-				D0722B3019DF6CDB009CBE62 /* MixpanelFunctions.m in Sources */,
+				D0722B3019DF6CDB009CBE62 /* MixpanelUtilities.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -197,7 +197,7 @@
 			files = (
 				D0722B5219DF740B009CBE62 /* PJSONKit.m in Sources */,
 				D0722B4919DF6DAD009CBE62 /* Mixpanel.m in Sources */,
-				D0722B4A19DF6DAD009CBE62 /* MixpanelFunctions.m in Sources */,
+				D0722B4A19DF6DAD009CBE62 /* MixpanelUtilities.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

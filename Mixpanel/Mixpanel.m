@@ -10,18 +10,18 @@
 #import <UIKit/UIKit.h>
 #endif
 
-#include <resolv.h>
-
 #import "Mixpanel.h"
-#import "MixpanelFunctions.h"
-#import "PJSONKit.h"
-
-static NSString * const MPBaseURLString = @"https://api.mixpanel.com";
+#import "MixpanelUtilities.h"
 
 static NSString * const MPDistinctIdKey = @"MPDistinctId";
 static NSString * const MPEventQueueKey = @"MPEventQueue";
 
 static Mixpanel *sharedInstance = nil;
+
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+@interface Mixpanel () <NSFilePresenter>
+@end
+#endif
 
 @implementation Mixpanel
 
@@ -29,22 +29,25 @@ static Mixpanel *sharedInstance = nil;
 @synthesize distinctId = _distinctId;
 @synthesize defaultProperties = _defaultProperties;
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+@synthesize presentedItemOperationQueue = _presentedItemOperationQueue;
+@synthesize presentedItemURL = _cacheURL;
+#endif
+
 + (NSDictionary *)automaticProperties {
     static NSDictionary *automaticProperties = nil;
     if (!automaticProperties) {
-        NSBundle *bundle = [NSBundle bundleForClass:self];
-        
+        NSBundle *bundle = [NSBundle mainBundle];
+
         NSMutableDictionary *properties = [NSMutableDictionary dictionaryWithDictionary:MPDeviceProperties()];
         [properties setValue:[bundle.infoDictionary objectForKey:(id)kCFBundleVersionKey] forKey:@"$app_version"];
         [properties setValue:[bundle.infoDictionary objectForKey:@"CFBundleShortVersionString"] forKey:@"$app_release"];
         [properties setValue:@"iphone" forKey:@"mp_lib"];
-        [properties setValue:@"VERSION!" forKey:@"$lib_version"];
-        
+        [properties setValue:@"1.0" forKey:@"$lib_version"];
+
         automaticProperties = [properties copy];
     }
-    
-    // TODO: WiFi
-    
+
     return automaticProperties;
 }
 
@@ -77,25 +80,51 @@ static Mixpanel *sharedInstance = nil;
             return nil;
         }
 
-        _token = [token copy];
-        _cacheURL = [[[cacheDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"Mixpanel-%@", token]] URLByAppendingPathExtension:@"plist"] retain];
-        _baseURL = [[NSURL URLWithString:MPBaseURLString] retain];
+        NSString *bundleIdentifer = [[NSBundle mainBundle] bundleIdentifier];
 
+        _token = [token copy];
+        _cacheURL = [[[cacheDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"Mixpanel-%@-%@", bundleIdentifer, token]] URLByAppendingPathExtension:@"plist"] retain];
+
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+        _presentedItemOperationQueue = [[NSOperationQueue alloc] init];
+
+        __block NSDictionary *state = nil;
+        if ([NSFileCoordinator class]) {
+            NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
+            [coordinator coordinateReadingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
+                state = [NSDictionary dictionaryWithContentsOfURL:newURL];
+                
+                // "To avoid that race condition you can invoke +addFilePresenter: in the same block that you pass to -coordinateReadingItemAtURL:options:error:byAccessor: to read what the file presenter will present"
+                // Not sure why I need to autorelease here, +addFilePresenter: should not be retaining self
+                [NSFileCoordinator addFilePresenter:[self autorelease]];
+            }];
+            [coordinator release];
+        } else {
+            state = [NSDictionary dictionaryWithContentsOfURL:_cacheURL];
+        }
+#else
         NSDictionary *state = [NSDictionary dictionaryWithContentsOfURL:_cacheURL];
-        _distinctId = [state objectForKey:MPDistinctIdKey];
+#endif
+
+        _distinctId = [[state objectForKey:MPDistinctIdKey] copy];
         _eventQueue = ([[state objectForKey:MPEventQueueKey] mutableCopy] ?: [NSMutableArray new]);
 
-        _timer = [[NSTimer scheduledTimerWithTimeInterval:15.0f target:self selector:@selector(flush) userInfo:nil repeats:YES] retain];
+        MPUnsafeObject *unsafeSelf = [MPUnsafeObject unsafeObjectWithObject:self];
+        _timer = [[NSTimer scheduledTimerWithTimeInterval:15.0f target:unsafeSelf selector:@selector(flush) userInfo:nil repeats:YES] retain];
+        [self flush];
     }
     return self;
 }
 
 - (void)dealloc {
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    [NSFileCoordinator removeFilePresenter:self];
+    [_presentedItemOperationQueue release];
+#endif
     [_token release];
     [_distinctId release];
     [_defaultProperties release];
     [_cacheURL release];
-    [_baseURL release];
     [_eventQueue release];
     [_timer invalidate];
     [_timer release];
@@ -108,7 +137,7 @@ static Mixpanel *sharedInstance = nil;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
         UIDevice *device = [UIDevice currentDevice];
-        _distinctId = ([device respondsToSelector:@selector(identifierForVendor)] ? [device.identifierForVendor UUIDString] : [[device performSelector:@selector(uniqueIdentifier)] copy]);
+        _distinctId = ([device respondsToSelector:@selector(identifierForVendor)] ? [[device.identifierForVendor UUIDString] copy] : [[device performSelector:@selector(uniqueIdentifier)] copy]);
 #pragma clang diagnostic pop
 #elif defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
         io_registry_entry_t ioRegistryRoot = IORegistryEntryFromPath(kIOMasterPortDefault, "IOService:/");
@@ -143,56 +172,139 @@ static Mixpanel *sharedInstance = nil;
     [mergedProperties setValue:self.distinctId forKey:@"distinct_id"];
 
     NSDictionary *eventDictionary = MPJSONSerializableObject([NSDictionary dictionaryWithObjectsAndKeys:event, @"event", mergedProperties, @"properties", nil]);
-    [_eventQueue addObject:eventDictionary];
-    [self save];
+
+    if (_reading || _writing) {
+        if (!_eventBuffer)
+            _eventBuffer = [NSMutableArray new];
+        [_eventBuffer addObject:eventDictionary];
+    } else {
+        [_eventQueue addObject:eventDictionary];
+        [self save];
+    }
 }
 
 #pragma mark - Persistence
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+
+- (void)merge {
+    if (_reading || _writing)
+        return;
+
+    __block NSDictionary *state = nil;
+    NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
+    [coordinator coordinateReadingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
+        state = [NSDictionary dictionaryWithContentsOfURL:newURL];
+    }];
+    [coordinator release];
+
+    _eventQueue = ([[state objectForKey:MPEventQueueKey] mutableCopy] ?: [NSMutableArray new]);
+    [_eventQueue addObjectsFromArray:_eventBuffer];
+
+    [self save];
+
+    [_eventBuffer release];
+    _eventBuffer = nil;
+}
+
+#endif
+
 - (void)save {
     NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_distinctId, MPDistinctIdKey, _eventQueue, MPEventQueueKey, nil];
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    if ([NSFileCoordinator class]) {
+        NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
+        [coordinator coordinateWritingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
+            [state writeToURL:newURL atomically:YES];
+        }];
+        [coordinator release];
+    } else {
+        [state writeToURL:_cacheURL atomically:YES];
+    }
+#else
     [state writeToURL:_cacheURL atomically:YES];
+#endif
 }
 
 #pragma mark - Flushing
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+
+- (void)flushOtherClients {
+    if (![NSFileCoordinator class])
+        return;
+
+    NSURL *cacheDirectory = [_cacheURL URLByDeletingLastPathComponent];
+    NSDirectoryEnumerator *enumerator = [[NSFileManager defaultManager] enumeratorAtURL:cacheDirectory includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles errorHandler:^BOOL(NSURL *url, NSError *error) {
+        return YES;
+    }];
+
+    for (NSURL *cacheURL in enumerator) {
+        if ([cacheURL isEqual:_cacheURL])
+            continue;
+        if (![cacheURL.lastPathComponent hasPrefix:@"Mixpanel"])
+            continue;
+
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] init];
+            [coordinator coordinateReadingItemAtURL:cacheURL options:0 writingItemAtURL:cacheURL options:0 error:nil byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
+                NSMutableDictionary *state = [NSMutableDictionary dictionaryWithContentsOfURL:newReadingURL];
+                if (!state)
+                    return;
+
+                NSMutableArray *events = ([NSMutableArray arrayWithArray:[state objectForKey:MPEventQueueKey]] ?: [NSMutableArray array]);
+                NSUInteger length = MIN(events.count, 100);
+                if (!length)
+                    return;
+
+                NSArray *batch = [events subarrayWithRange:NSMakeRange(0, length)];
+                NSURLRequest *request = MPURLRequestForEvents(events);
+                if (!request)
+                    return;
+
+                NSError *error = nil;
+                NSHTTPURLResponse *response = nil;
+                [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
+
+                NSIndexSet *acceptableCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
+                if (!error && [acceptableCodes containsIndex:response.statusCode])
+                    [events removeObjectsInArray:batch];
+                else
+                    return;
+
+                [state setObject:events forKey:MPEventQueueKey];
+                [state writeToURL:newWritingURL atomically:YES];
+            }];
+            [coordinator release];
+        });
+    }
+}
+
+#endif
+
 - (void)flush {
-    if (_connection)
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    [self flushOtherClients];
+#endif
+
+    if (_connection || _reading || _writing)
         return;
 
     NSUInteger length = MIN(_eventQueue.count, 50);
     if (!length)
         return;
 
-    NSError *error = nil;
     _batch = [[_eventQueue subarrayWithRange:NSMakeRange(0, length)] copy];
-    NSData *data = [_batch MPJSONDataWithOptions:0 error:&error];
-    if (!data) {
+    NSURLRequest *request = MPURLRequestForEvents(_batch);
+    if (!request) {
         [_batch release];
         _batch = nil;
         return;
     }
 
-
-    NSUInteger encodedLength = ((data.length + 2) / 3) * 4 + 1;
-    char *buffer = malloc(encodedLength);
-    int actual = b64_ntop(data.bytes, data.length, buffer, encodedLength);
-    if (!actual) {
-        free(buffer);
-        return;
-    }
-
-    NSString *encodedData = [[[NSString alloc] initWithBytesNoCopy:buffer length:(actual + 1) encoding:NSUTF8StringEncoding freeWhenDone:YES] autorelease];
-    NSString *escapedData = (NSString *)CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (CFStringRef)encodedData, NULL, CFSTR("!*'();:@&=+$,/?%#[]"), kCFStringEncodingUTF8));
-    NSData *body = [[NSString stringWithFormat:@"ip=1&data=%@", escapedData] dataUsingEncoding:NSUTF8StringEncoding];
-
-    NSURL *url = [NSURL URLWithString:@"track/" relativeToURL:_baseURL];
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-    [request setHTTPMethod:@"POST"];
-    [request setHTTPBody:body];
-
     _connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
     [_connection start];
+
     [self retain];
 }
 
@@ -219,7 +331,29 @@ static Mixpanel *sharedInstance = nil;
     _connection = nil;
     _batch = nil;
 
-    [self release];
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    if (_reader) {
+        _reading = YES;
+        _reader(^{
+            _reading = NO;
+            [self merge];
+        });
+        Block_release(_reader);
+        _reader = nil;
+    }
+
+    if (_writer) {
+        _writing = YES;
+        _writer(^{
+            _writing = NO;
+            [self merge];
+        });
+        Block_release(_writer);
+        _writer = nil;
+    }
+#endif
+
+    [self autorelease];
 
     if (_eventQueue.count > 0)
         [self flush];
@@ -247,5 +381,40 @@ static Mixpanel *sharedInstance = nil;
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
     [self finishFlush];
 }
+
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+
+#pragma mark - NSFilePresenter
+
+- (void)relinquishPresentedItemToReader:(void (^)(void (^reacquirer)(void)))reader {
+    if (_connection) {
+        _reader = Block_copy(reader);
+    } else {
+        _reading = YES;
+        reader(^{
+            _reading = NO;
+            [self merge];
+        });
+    }
+}
+
+- (void)relinquishPresentedItemToWriter:(void (^)(void (^)(void)))writer {
+    if (_connection) {
+        _writer = Block_copy(writer);
+    } else {
+        _writing = YES;
+        writer(^{
+            _writing = NO;
+            [self merge];
+        });
+    }
+}
+
+- (void)savePresentedItemChangesWithCompletionHandler:(void (^)(NSError *errorOrNil))completionHandler {
+    [self save];
+    completionHandler(nil);
+}
+
+#endif
 
 @end

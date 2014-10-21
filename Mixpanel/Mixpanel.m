@@ -340,15 +340,18 @@ static Mixpanel *sharedInstance = nil;
 }
 
 - (void)finishFlush {
+    BOOL success;
     NSIndexSet *acceptableCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
     if (_error || ![acceptableCodes containsIndex:_response.statusCode]) {
         NSLog(@"%@: Network failure %@", self, _error);
+        success = NO;
     } else {
         NSInteger result = [[[[NSString alloc] initWithData:_data encoding:NSUTF8StringEncoding] autorelease] integerValue];
         if (!result)
             NSLog(@"%@: API rejected some items", self);
         [_eventQueue removeObjectsInArray:_batch];
         [self save];
+        success = YES;
     }
 
     [_error release];
@@ -394,7 +397,7 @@ static Mixpanel *sharedInstance = nil;
 
     [self autorelease];
 
-    if (_eventQueue.count > 0)
+    if (_eventQueue.count > 0 && success)
         [self flush];
 }
 

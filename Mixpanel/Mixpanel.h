@@ -23,6 +23,9 @@
     NSTimer *_timer;
     BOOL _reading;
     BOOL _writing;
+#ifdef NS_BLOCKS_AVAILABLE
+    void (^_completionHandler)();
+#endif
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
     NSOperationQueue *_presentedItemOperationQueue;
     NSMutableSet *_blockedURLs;
@@ -47,6 +50,9 @@
 - (void)track:(NSString *)event properties:(NSDictionary *)properties;
 
 - (void)flush;
+#ifdef NS_BLOCKS_AVAILABLE
+- (void)flush:(void(^)())completionHandler;
+#endif
 
 - (void)startPresenting;
 - (void)stopPresenting;

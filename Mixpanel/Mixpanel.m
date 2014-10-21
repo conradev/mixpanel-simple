@@ -362,6 +362,14 @@ static Mixpanel *sharedInstance = nil;
     _connection = nil;
     _batch = nil;
 
+#ifdef NS_BLOCKS_AVAILABLE
+    if (_completionHandler) {
+        _completionHandler();
+        Block_release(_completionHandler);
+        _completionHandler = nil;
+    }
+#endif
+
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
     if (_reader) {
         _reading = YES;
@@ -389,6 +397,22 @@ static Mixpanel *sharedInstance = nil;
     if (_eventQueue.count > 0)
         [self flush];
 }
+
+#ifdef NS_BLOCKS_AVAILABLE
+
+- (void)flush:(void(^)())completionHandler {
+    [self flush];
+
+    if (completionHandler) {
+        if (_connection) {
+            _completionHandler = Block_copy(completionHandler);
+        } else {
+            completionHandler();
+        }
+    }
+}
+
+#endif
 
 #pragma mark - NSURLConnectionDataDelegate
 

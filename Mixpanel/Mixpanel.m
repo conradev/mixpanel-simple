@@ -175,7 +175,7 @@ static Mixpanel *sharedInstance = nil;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
         UIDevice *device = [UIDevice currentDevice];
-        _distinctId = ([device respondsToSelector:@selector(identifierForVendor)] ? [[device.identifierForVendor UUIDString] copy] : [[device performSelector:@selector(uniqueIdentifier)] copy]);
+        _distinctId = ([device respondsToSelector:@selector(identifierForVendor)] ? [[device.identifierForVendor UUIDString] copy] : /*[[device performSelector:@selector(uniqueIdentifier)] copy]*/ nil);
 #pragma clang diagnostic pop
 #elif defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
         io_registry_entry_t ioRegistryRoot = IORegistryEntryFromPath(kIOMasterPortDefault, "IOService:/");

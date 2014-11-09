@@ -222,6 +222,16 @@ static Mixpanel *sharedInstance = nil;
     }
 }
 
+- (void)createAlias:(NSString *)alias forDistinctID:(NSString *)distinctID {
+    if (!alias.length)
+        NSLog(@"%@: Create alias called with invalid alias", self);
+    if (!distinctID.length)
+        NSLog(@"%@: Create alias called with invalid distinct ID", self);
+    if (!alias.length || !distinctID.length)
+        return;
+    [self track:@"$create_alias" properties:@{@"distinct_id": distinctID, @"alias": alias}];
+}
+
 #pragma mark - Persistence
 
 - (void)save {

@@ -23,6 +23,7 @@
     NSTimer *_timer;
     BOOL _reading;
     BOOL _writing;
+    BOOL _presenting;
 #ifdef NS_BLOCKS_AVAILABLE
     void (^_completionHandler)();
 #endif
@@ -48,6 +49,7 @@
 
 - (void)track:(NSString *)event;
 - (void)track:(NSString *)event properties:(NSDictionary *)properties;
+- (void)createAlias:(NSString *)alias forDistinctID:(NSString *)distinctID;
 
 - (void)flush;
 #ifdef NS_BLOCKS_AVAILABLE

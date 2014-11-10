@@ -40,6 +40,10 @@
 @property (nonatomic, copy) NSDictionary *defaultProperties;
 @property (nonatomic, readonly, getter = isPresenting) BOOL presenting;
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
++ (dispatch_queue_t)coordinationQueue;
+#endif
+
 + (instancetype)sharedInstanceWithToken:(NSString *)token cacheDirectory:(NSURL *)cacheDirectory;
 + (instancetype)sharedInstance;
 

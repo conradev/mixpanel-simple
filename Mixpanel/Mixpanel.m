@@ -52,6 +52,17 @@ static Mixpanel *sharedInstance = nil;
     return automaticProperties;
 }
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
++ (dispatch_queue_t)coordinationQueue {
+    static dispatch_queue_t coordinationQueue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        coordinationQueue = dispatch_queue_create("com.mixpanel.simple", DISPATCH_QUEUE_SERIAL);
+    });
+    return coordinationQueue;
+}
+#endif
+
 + (instancetype)sharedInstanceWithToken:(NSString *)token cacheDirectory:(NSURL *)cacheDirectory {
     if (!sharedInstance)
         sharedInstance = [[self alloc] initWithToken:token cacheDirectory:cacheDirectory];
@@ -127,7 +138,7 @@ static Mixpanel *sharedInstance = nil;
         return;
 
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async([[self class] coordinationQueue], ^{
         __block NSDictionary *state = nil;
         if ([NSFileCoordinator class]) {
             NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
@@ -237,7 +248,7 @@ static Mixpanel *sharedInstance = nil;
 - (void)save {
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
     if ([NSFileCoordinator class]) {
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        dispatch_async([[self class] coordinationQueue], ^{
             NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
             [coordinator coordinateWritingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
                 NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_distinctId, MPDistinctIdKey, _eventQueue, MPEventQueueKey, nil];
@@ -281,7 +292,7 @@ static Mixpanel *sharedInstance = nil;
 
         if (![_blockedURLs containsObject:cacheURL]) {
             [_blockedURLs addObject:cacheURL];
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async([[self class] coordinationQueue], ^{
                 NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] init];
                 [_blockedURLs addObject:cacheURL];
                 [coordinator coordinateReadingItemAtURL:cacheURL options:0 writingItemAtURL:cacheURL options:0 error:nil byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {

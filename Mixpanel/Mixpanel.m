@@ -95,7 +95,7 @@ static Mixpanel *sharedInstance = nil;
         NSString *bundleIdentifer = [[NSBundle mainBundle] bundleIdentifier];
 
         _token = [token copy];
-        _cacheURL = [[[cacheDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"Mixpanel-%@-%@", bundleIdentifer, token]] URLByAppendingPathExtension:@"plist"] retain];
+        _cacheURL = [[[[cacheDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"Mixpanel-%@-%@", bundleIdentifer, token]] URLByAppendingPathExtension:@"plist"] URLByResolvingSymlinksInPath] retain];
 
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
         _presentedItemOperationQueue = [[NSOperationQueue alloc] init];
@@ -163,11 +163,10 @@ static Mixpanel *sharedInstance = nil;
         _eventQueue = ([[state objectForKey:MPEventQueueKey] mutableCopy] ?: [NSMutableArray new]);
         [_eventQueue addObjectsFromArray:_eventBuffer];
 
-        [self save];
-
         [_eventBuffer release];
         _eventBuffer = nil;
-
+        
+        [self save];
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
     });
 #endif
@@ -283,6 +282,7 @@ static Mixpanel *sharedInstance = nil;
         _blockedURLs = [NSMutableSet new];
 
     for (NSURL *cacheURL in enumerator) {
+        cacheURL = [cacheURL URLByResolvingSymlinksInPath];
         if ([cacheURL isEqual:_cacheURL])
             continue;
         if (![cacheURL.lastPathComponent hasPrefix:@"Mixpanel"])

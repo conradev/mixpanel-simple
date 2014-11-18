@@ -96,6 +96,7 @@ static Mixpanel *sharedInstance = nil;
 
         _token = [token copy];
         _cacheURL = [[[[cacheDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"Mixpanel-%@-%@", bundleIdentifer, token]] URLByAppendingPathExtension:@"plist"] URLByResolvingSymlinksInPath] retain];
+        _eventQueueLock = [NSLock new];
 
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
         _presentedItemOperationQueue = [[NSOperationQueue alloc] init];
@@ -156,6 +157,7 @@ static Mixpanel *sharedInstance = nil;
 
         _presenting = YES;
 
+        [_eventQueueLock lock];
         [_distinctId release];
         [_eventQueue release];
 
@@ -165,7 +167,8 @@ static Mixpanel *sharedInstance = nil;
 
         [_eventBuffer release];
         _eventBuffer = nil;
-        
+        [_eventQueueLock unlock];
+
         [self save];
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
     });
@@ -227,7 +230,9 @@ static Mixpanel *sharedInstance = nil;
             _eventBuffer = [NSMutableArray new];
         [_eventBuffer addObject:eventDictionary];
     } else {
+        [_eventQueueLock lock];
         [_eventQueue addObject:eventDictionary];
+        [_eventQueueLock unlock];
         [self save];
     }
 }
@@ -250,8 +255,10 @@ static Mixpanel *sharedInstance = nil;
         dispatch_async([[self class] coordinationQueue], ^{
             NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:self];
             [coordinator coordinateWritingItemAtURL:_cacheURL options:0 error:nil byAccessor:^(NSURL *newURL) {
+                [_eventQueueLock lock];
                 NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_distinctId, MPDistinctIdKey, _eventQueue, MPEventQueueKey, nil];
                 [state writeToURL:newURL atomically:YES];
+                [_eventQueueLock unlock];
             }];
             [coordinator release];
         });
@@ -370,7 +377,9 @@ static Mixpanel *sharedInstance = nil;
         NSInteger result = [[[[NSString alloc] initWithData:_data encoding:NSUTF8StringEncoding] autorelease] integerValue];
         if (!result)
             NSLog(@"%@: API rejected some items", self);
+        [_eventQueueLock lock];
         [_eventQueue removeObjectsInArray:_batch];
+        [_eventQueueLock unlock];
         [self save];
         success = YES;
     }

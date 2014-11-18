@@ -24,6 +24,7 @@
     BOOL _reading;
     BOOL _writing;
     BOOL _presenting;
+    NSLock *_eventQueueLock;
 #ifdef NS_BLOCKS_AVAILABLE
     void (^_completionHandler)();
 #endif

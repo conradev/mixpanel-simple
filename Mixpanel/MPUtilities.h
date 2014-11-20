@@ -1,5 +1,6 @@
 //
-//  MixpanelFunctions.h
+//  MixpanelUtilities.h
+//  mixpanel-simple
 //
 //  Created by Conrad Kramer on 10/2/14.
 //  Copyright (c) 2014 DeskConnect. All rights reserved.
@@ -9,16 +10,6 @@
 
 extern id MPJSONSerializableObject(id object);
 
-extern NSDictionary *MPDeviceProperties();
+extern NSDictionary *MPAutomaticProperties();
 
 extern NSURLRequest *MPURLRequestForEvents(NSArray *events);
-
-@interface MPUnsafeObject : NSObject {
-    id _object;
-}
-
-+ (instancetype)unsafeObjectWithObject:(id)object;
-
-- (instancetype)initWithObject:(id)object;
-
-@end

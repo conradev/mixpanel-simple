@@ -58,7 +58,7 @@
 
 - (void)flush {
     NSSet *queuedURLs = [NSSet setWithArray:[_flushOperationQueue.operations valueForKey:NSStringFromSelector(@selector(cacheURL))]];
-    NSDirectoryEnumerator *cacheEnumerator = [[NSFileManager defaultManager] enumeratorAtURL:_cacheDirectory includingPropertiesForKeys:nil options:0 errorHandler:^BOOL(NSURL *url, NSError *error) {
+    NSDirectoryEnumerator *cacheEnumerator = [[NSFileManager defaultManager] enumeratorAtURL:_cacheDirectory includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles errorHandler:^BOOL(NSURL *url, NSError *error) {
         return YES;
     }];
     for (NSURL *cacheURL in cacheEnumerator) {

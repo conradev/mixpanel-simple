@@ -15,6 +15,7 @@
     NSDictionary *_defaultProperties;
     NSArray *_eventQueue;
     NSOperationQueue *_eventOperationQueue;
+    NSOperationQueue *_flushOperationQueue;
     NSURL *_presentedItemURL;
     NSOperationQueue *_presentedItemOperationQueue;
     NSDate *_lastModificationDate;

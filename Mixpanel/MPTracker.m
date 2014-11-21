@@ -48,6 +48,7 @@ NSString * const MPEventQueueKey = @"MPEventQueue";
         _eventOperationQueue = [NSOperationQueue new];
         _eventOperationQueue.maxConcurrentOperationCount = 1;
         _eventOperationQueue.suspended = YES;
+        _flushOperationQueue = [NSOperationQueue new];
         _presentedItemURL = [cacheURL copy];
         _presentedItemOperationQueue = [NSOperationQueue new];
         _presentedItemOperationQueue.maxConcurrentOperationCount = 1;
@@ -64,6 +65,7 @@ NSString * const MPEventQueueKey = @"MPEventQueue";
     [_defaultProperties release];
     [_eventQueue release];
     [_eventOperationQueue release];
+    [_flushOperationQueue release];
     [_presentedItemURL release];
     [_presentedItemOperationQueue release];
     [_lastModificationDate release];
@@ -164,7 +166,7 @@ NSString * const MPEventQueueKey = @"MPEventQueue";
 - (void)flush:(void(^)())completion {
     MPFlushOperation *flushOperation = [[MPFlushOperation alloc] initWithCacheURL:_presentedItemURL];
     flushOperation.completionBlock = completion;
-    [_eventOperationQueue addOperation:flushOperation];
+    [_flushOperationQueue addOperation:flushOperation];
     [flushOperation release];
 }
 

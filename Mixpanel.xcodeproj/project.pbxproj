@@ -19,6 +19,7 @@
 		D0722B4F19DF739A009CBE62 /* PJSONKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0722B4D19DF739A009CBE62 /* PJSONKit.h */; };
 		D0722B5219DF740B009CBE62 /* PJSONKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B4E19DF739A009CBE62 /* PJSONKit.m */; settings = {COMPILER_FLAGS = "-Wno-objc-designated-initializers"; }; };
 		D0722B5319DF741A009CBE62 /* PJSONKit.m in Sources */ = {isa = PBXBuildFile; fileRef = D0722B4E19DF739A009CBE62 /* PJSONKit.m */; settings = {COMPILER_FLAGS = "-Wno-objc-designated-initializers"; }; };
+		D0F938BE1A1ED2A000ABA994 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F938BD1A1ED2A000ABA994 /* UIKit.framework */; };
 		D0FB1B5D1A1D98CC0031DE23 /* MPFlusher.m in Sources */ = {isa = PBXBuildFile; fileRef = D0FB1B5C1A1D98CC0031DE23 /* MPFlusher.m */; };
 		D0FB1B681A1D9CD80031DE23 /* libMixpanel-iOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0722B1719DF6CAB009CBE62 /* libMixpanel-iOS.a */; };
 		D0FB1B721A1D9D070031DE23 /* MPTrackerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0FB1B701A1D9D070031DE23 /* MPTrackerTests.m */; };
@@ -85,6 +86,7 @@
 		D0722B3519DF6D8D009CBE62 /* libMixpanel-OSX.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libMixpanel-OSX.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0722B4D19DF739A009CBE62 /* PJSONKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PJSONKit.h; path = JSONKit/PJSONKit.h; sourceTree = SOURCE_ROOT; };
 		D0722B4E19DF739A009CBE62 /* PJSONKit.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = PJSONKit.m; path = JSONKit/PJSONKit.m; sourceTree = SOURCE_ROOT; };
+		D0F938BD1A1ED2A000ABA994 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		D0FB1B5B1A1D98CC0031DE23 /* MPFlusher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPFlusher.h; sourceTree = "<group>"; };
 		D0FB1B5C1A1D98CC0031DE23 /* MPFlusher.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MPFlusher.m; sourceTree = "<group>"; };
 		D0FB1B621A1D9CD80031DE23 /* Mixpanel-iOS-Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Mixpanel-iOS-Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -105,6 +107,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0F938BE1A1ED2A000ABA994 /* UIKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,6 +206,7 @@
 		D0FB1B8B1A1DA11D0031DE23 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0F938BD1A1ED2A000ABA994 /* UIKit.framework */,
 				D0FB1B8C1A1DA17D0031DE23 /* libresolv.dylib */,
 				D0FB1B891A1DA1110031DE23 /* libresolv.dylib */,
 				D0FB1B8E1A1DA1860031DE23 /* AppKit.framework */,

@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 DeskConnect. All rights reserved.
 //
 
+#import <UIKit/UIKit.h>
+
 #import "MPTracker.h"
 #import "MPUtilities.h"
 #import "MPFlushOperation.h"
@@ -79,6 +81,23 @@ NSString * const MPEventQueueKey = @"MPEventQueue";
 
 - (NSURL *)cacheURL {
     return _presentedItemURL;
+}
+
+- (NSString *)distinctId {
+    if (!_distinctId) {
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
+        UIDevice *device = [UIDevice currentDevice];
+        _distinctId = ([device respondsToSelector:@selector(identifierForVendor)] ? [[device.identifierForVendor UUIDString] copy] : nil);
+#pragma clang diagnostic pop
+#elif defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
+        io_registry_entry_t ioRegistryRoot = IORegistryEntryFromPath(kIOMasterPortDefault, "IOService:/");
+        _distinctId = (NSString *)IORegistryEntryCreateCFProperty(ioRegistryRoot, CFSTR(kIOPlatformUUIDKey), kCFAllocatorDefault, 0);
+        IOObjectRelease(ioRegistryRoot);
+#endif
+    }
+    return _distinctId;
 }
 
 - (void)track:(NSString *)event {
@@ -215,7 +234,7 @@ NSString * const MPEventQueueKey = @"MPEventQueue";
     NSMutableDictionary *mergedProperties = [NSMutableDictionary dictionaryWithDictionary:properties];
     [mergedProperties addEntriesFromDictionary:_defaultProperties];
     [mergedProperties setValue:_token forKey:@"token"];
-    [mergedProperties setValue:_distinctId forKey:@"distinct_id"];
+    [mergedProperties setValue:self.distinctId forKey:@"distinct_id"];
 
     NSDictionary *eventDictionary = MPJSONSerializableObject([NSDictionary dictionaryWithObjectsAndKeys:event, @"event", mergedProperties, @"properties", nil]);
     NSArray *eventQueue = [_eventQueue arrayByAddingObject:eventDictionary];
@@ -256,7 +275,7 @@ NSString * const MPEventQueueKey = @"MPEventQueue";
 }
 
 - (void)writeStateToURL:(NSURL *)url {
-    NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_eventQueue, MPEventQueueKey, _distinctId, MPDistinctIdKey, nil];
+    NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:_eventQueue, MPEventQueueKey, self.distinctId, MPDistinctIdKey, nil];
     [state writeToURL:url atomically:YES];
     [self updateModificationDateFromURL:url];
 }

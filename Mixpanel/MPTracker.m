@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 DeskConnect. All rights reserved.
 //
 
+#import <Foundation/Foundation.h>
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 #import <UIKit/UIKit.h>
 #endif

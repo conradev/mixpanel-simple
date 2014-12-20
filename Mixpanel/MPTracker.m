@@ -6,8 +6,9 @@
 //  Copyright (c) 2014 DeskConnect. All rights reserved.
 //
 
+#if DC_TARGET_MOBILE
 #import <UIKit/UIKit.h>
-
+#endif
 #import "MPTracker.h"
 #import "MPUtilities.h"
 #import "MPFlushOperation.h"

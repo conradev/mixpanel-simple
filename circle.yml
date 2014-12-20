@@ -1,0 +1,8 @@
+machine:
+  environment:
+    XCODE_PROJECT: Mixpanel.xcodeproj
+    XCODE_SCHEME: Mixpanel-iOS
+checkout:
+  post:
+    - git submodule sync
+    - git submodule update --init
